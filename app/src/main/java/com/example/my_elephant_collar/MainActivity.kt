@@ -36,6 +36,7 @@ import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
+import com.google.maps.android.compose.Polyline
 import com.google.maps.android.compose.rememberCameraPositionState
 
 import com.example.my_elephant_collar.ui.theme.My_elephant_collarTheme
@@ -44,102 +45,106 @@ class MainActivity : ComponentActivity() {
     private lateinit var database: DatabaseReference
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        // Call super.onCreate(savedInstanceState) FIRST and only ONCE
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge() // Enable edge-to-edge display
+        enableEdgeToEdge()
 
-        // Initialize Firebase Database reference
         database = FirebaseDatabase.getInstance().reference
 
-        // Set the content of the activity using Jetpack Compose
         setContent {
             My_elephant_collarTheme {
-                // A surface container using the 'background' color from the theme
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    // Display the LocationMapScreen which fetches and shows location on a map
-                    LocationMapScreen(databaseRef = database)
+                    LocationMapScreen(databaseRef = database, elephantId = "elephantId123") // Specify the elephant ID
                 }
             }
         }
     }
 }
 
-/**
- * Composable function to display a Google Map with location data fetched from Firebase.
- * It listens for real-time updates to latitude and longitude.
- */
 @Composable
-fun LocationMapScreen(databaseRef: DatabaseReference) {
-    // State to hold the fetched latitude and longitude
-    var latitude by remember { mutableStateOf(0.0) }
-    var longitude by remember { mutableStateOf(0.0) }
+fun LocationMapScreen(databaseRef: DatabaseReference, elephantId: String) {
+    // State to hold the historical locations as LatLng objects
+    var historicalLocations by remember { mutableStateOf<List<LatLng>>(emptyList()) }
+    // State to hold the latest known location
+    var currentLatLng by remember { mutableStateOf<LatLng?>(null) }
     // State to indicate if data is still loading
     var isLoading by remember { mutableStateOf(true) }
     // State to hold any error messages
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
-    // Define a default camera position for the map
-    val defaultLocation = LatLng(0.0, 0.0) // Default to (0,0) or a known central point
+    // Camera position state for the Google Map
     val cameraPositionState = rememberCameraPositionState {
-        position = CameraPosition.fromLatLngZoom(defaultLocation, 1f) // Start zoomed out
+        position = CameraPosition.fromLatLngZoom(LatLng(0.0, 0.0), 5f) // Default zoom
     }
 
-    // DisposableEffect is used to manage the lifecycle of the Firebase listener.
-    // It adds the listener when the composable enters the composition and removes it
-    // when the composable leaves the composition to prevent memory leaks.
-    DisposableEffect(databaseRef) {
-        // Reference to the "location" node in Firebase
-        // Assumes data structure like:
-        // "location": {
-        //   "latitude": 37.7749,
-        //   "longitude": -122.4194
-        // }
-        val locationRef = databaseRef.child("location")
+    // DisposableEffect to manage the Firebase listener lifecycle
+    DisposableEffect(databaseRef, elephantId) {
+        // Reference to the specific elephant's movements in Firebase
+        val movementsRef = databaseRef.child("elephantMovements").child(elephantId)
 
         val valueEventListener = object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
-                // Check if the snapshot exists and contains children
-                if (snapshot.exists()) {
-                    val lat = snapshot.child("latitude").value as? Double
-                    val lon = snapshot.child("longitude").value as? Double
+                // Temporary list to store locations with their timestamps for sorting
+                val tempLocationsWithTimestamps = mutableListOf<Pair<Long, LatLng>>()
+                var latestTimestamp: Long = 0L
+                var latestLocation: LatLng? = null
 
-                    if (lat != null && lon != null) {
-                        latitude = lat
-                        longitude = lon
-                        // Update camera position to the new fetched location
-                        cameraPositionState.position = CameraPosition.fromLatLngZoom(LatLng(latitude, longitude), 10f)
-                        errorMessage = null // Clear any previous error
-                        Log.d("FIREBASE_MAP", "Fetched location: Lat=$latitude, Lon=$longitude")
-                    } else {
-                        errorMessage = "Location data incomplete or invalid."
-                        Log.e("FIREBASE_MAP", "Location data incomplete or invalid: $snapshot")
+                // Iterate through each child snapshot (which should be a timestamp key)
+                for (locationSnapshot in snapshot.children) {
+                    // Get the timestamp from the key and convert it to Long
+                    val timestamp = locationSnapshot.key?.toLongOrNull()
+
+                    val latitude = locationSnapshot.child("latitude").getValue(Double::class.java)
+                    val longitude = locationSnapshot.child("longitude").getValue(Double::class.java)
+
+                    if (timestamp != null && latitude != null && longitude != null) {
+                        val latLng = LatLng(latitude, longitude)
+                        tempLocationsWithTimestamps.add(Pair(timestamp, latLng))
+
+                        // Keep track of the latest location based on timestamp
+                        if (timestamp > latestTimestamp) {
+                            latestTimestamp = timestamp
+                            latestLocation = latLng
+                        }
                     }
-                } else {
-                    errorMessage = "No location data found at 'location' node."
-                    Log.d("FIREBASE_MAP", "No location data found at 'location' node.")
                 }
-                isLoading = false // Data fetching complete
+
+                // Sort the locations by timestamp
+                historicalLocations = tempLocationsWithTimestamps
+                    .sortedBy { it.first } // Sort by the timestamp (first element of the Pair)
+                    .map { it.second } // Map back to just LatLng objects
+
+                currentLatLng = latestLocation
+
+                // If we have a latest location, move the camera there
+                latestLocation?.let {
+                    cameraPositionState.position = CameraPosition.fromLatLngZoom(it, 10f)
+                }
+
+                isLoading = false
+                errorMessage = null
+                Log.d("FIREBASE_MAP", "Fetched ${historicalLocations.size} historical locations for $elephantId")
             }
 
             override fun onCancelled(error: DatabaseError) {
-                errorMessage = "Failed to load location: ${error.message}"
-                isLoading = false // Data fetching complete
-                Log.e("FIREBASE_MAP", "Error getting location data: ${error.message}", error.toException())
+                errorMessage = "Failed to load movement data: ${error.message}"
+                isLoading = false
+                Log.e("FIREBASE_MAP", "Error getting movement data: ${error.message}", error.toException())
             }
         }
 
         // Add the listener to the Firebase reference
-        locationRef.addValueEventListener(valueEventListener)
+        movementsRef.addValueEventListener(valueEventListener)
 
         // When the composable leaves the composition, remove the listener
         onDispose {
-            locationRef.removeEventListener(valueEventListener)
+            movementsRef.removeEventListener(valueEventListener)
         }
     }
 
+    // Scaffold provides basic Material Design visual structure
     Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
         Column(
             modifier = Modifier
@@ -151,7 +156,7 @@ fun LocationMapScreen(databaseRef: DatabaseReference) {
             if (isLoading) {
                 // Show a loading indicator while data is being fetched
                 CircularProgressIndicator(modifier = Modifier.padding(16.dp))
-                Text("Loading location data...")
+                Text("Loading elephant movement data...")
             } else if (errorMessage != null) {
                 // Show error message if fetching failed
                 Text(
@@ -165,12 +170,19 @@ fun LocationMapScreen(databaseRef: DatabaseReference) {
                     modifier = Modifier.fillMaxSize(),
                     cameraPositionState = cameraPositionState
                 ) {
-                    // Add a marker at the fetched location
-                    Marker(
-                        state = MarkerState(position = LatLng(latitude, longitude)),
-                        title = "Elephant Location",
-                        snippet = "Lat: $latitude, Lon: $longitude"
-                    )
+                    // Draw the Polyline for the historical path
+                    if (historicalLocations.isNotEmpty()) {
+                        Polyline(points = historicalLocations, color = MaterialTheme.colorScheme.primary)
+                    }
+
+                    // Optionally, add a marker for the latest known location
+                    currentLatLng?.let {
+                        Marker(
+                            state = MarkerState(position = it),
+                            title = "Current Location",
+                            snippet = "Lat: ${it.latitude}, Lon: ${it.longitude}"
+                        )
+                    }
                 }
             }
         }
