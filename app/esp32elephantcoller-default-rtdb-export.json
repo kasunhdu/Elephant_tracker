@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "953190409144",
+    "firebase_url": "https://esp32elephantcoller-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "esp32elephantcoller",
+    "storage_bucket": "esp32elephantcoller.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:953190409144:android:f1ac347202a53ddfdbe54d",
+        "android_client_info": {
+          "package_name": "com.example.my_elephant_collar"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCEpw75hIMtF20CJTRYlvaXVJau_C9fGg0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
