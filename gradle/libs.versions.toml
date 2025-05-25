@@ -1,12 +1,24 @@
 [versions]
+appcompat = "1.7.0"
 compose = "1.5.0"
+composeBom = "2025.05.01"
+coreKtx = "1.16.0"
+firebaseBom = "33.14.0"
 kotlin = "1.9.0"
 agp = "8.2.0"
 kotlinCompilerExtension = "1.5.0"
 firebaseDatabase = "21.0.0"
 junitJupiter = "5.8.1"
+mapsCompose = "4.3.0"
+material = "1.12.0"
+playServicesLocation = "21.3.0"
+playServicesMaps = "19.2.0"
 
 [libraries]
+activity-compose = { group = "androidx.activity", name = "activity-compose", version = "1.8.2" } # Example
+
+appcompat = { module = "androidx.appcompat:appcompat", version.ref = "appcompat" }
+compose-bom = { module = "androidx.compose:compose-bom", version.ref = "composeBom" }
 compose-ui = { group = "androidx.compose.ui", name = "ui", version.ref = "compose" }
 compose-material = { group = "androidx.compose.material", name = "material", version.ref = "compose" }
 compose-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling", version.ref = "compose" }
@@ -14,13 +26,20 @@ compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling
 compose-runtime = { group = "androidx.compose.runtime", name = "runtime", version.ref = "compose" }
 compose-foundation = { group = "androidx.compose.foundation", name = "foundation", version.ref = "compose" }
 compose-compiler = { group = "androidx.compose.compiler", name = "compiler", version = "1.5.0" }
+core-ktx = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
+firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebaseBom" }
 firebase-database = { group = "com.google.firebase", name = "firebase-database", version.ref = "firebaseDatabase" }
-material3 = { module = "androidx.compose.material3:material3" }
-ui = { module = "androidx.compose.ui:ui" }
+firebase-database-ktx = { module = "com.google.firebase:firebase-database-ktx" }
+maps-compose = { module = "com.google.maps.android:maps-compose", version.ref = "mapsCompose" }
+material = { module = "com.google.android.material:material", version.ref = "material" }
+material3 = { group = "androidx.compose.material3", name = "material3", version = "1.2.1" } # Example
+play-services-maps = { module = "com.google.android.gms:play-services-maps", version.ref = "playServicesMaps" }
+ui = { group = "androidx.compose.ui", name = "ui", version = "1.6.5" } # Example
 ui-test-manifest = { module = "androidx.compose.ui:ui-test-manifest" }
 ui-tooling = { module = "androidx.compose.ui:ui-tooling" }
-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview" }
-junit-jupiter = { group = "org.junit.jupiter", name = "junit-jupiter", version.ref = "junitJupiter" }
+ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview", version = "1.6.5" } # Example
+junit-jupiter = { group = "org.junit.jupiter", name = "junit-jupiter-api", version = "5.11.0" } # Example
+play-services-location = { group = "com.google.android.gms", name = "play-services-location", version = "21.1.0" } # Example
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
